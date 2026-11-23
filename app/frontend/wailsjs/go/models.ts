@@ -80,6 +80,7 @@ export namespace main {
 	}
 	export class Status {
 	    state: string;
+	    reason: string;
 	    message: string;
 	    terrariaDir: string;
 	    version: string;
@@ -91,6 +92,7 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.state = source["state"];
+	        this.reason = source["reason"];
 	        this.message = source["message"];
 	        this.terrariaDir = source["terrariaDir"];
 	        this.version = source["version"];

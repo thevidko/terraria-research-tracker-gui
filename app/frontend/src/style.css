@@ -196,6 +196,23 @@ h1, h2, p {
     word-break: break-all;
 }
 
+.lang-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.segmented.segmented-sm {
+    padding: 2px;
+}
+
+.segmented.segmented-sm button {
+    padding: 2px 9px;
+    font-size: 12px;
+}
+
 /* --- main --- */
 
 .main {
@@ -334,7 +351,7 @@ h1, h2, p {
 
 .categories {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 8px;
 }
 

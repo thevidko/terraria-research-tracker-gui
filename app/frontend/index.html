@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="en">
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -16,29 +16,33 @@
             </div>
         </header>
 
-        <h2 class="side-title">Postavy</h2>
+        <h2 class="side-title" data-i18n="side.players"></h2>
         <nav id="players" class="players"></nav>
         <details id="other-players" class="other-players" hidden>
-            <summary>Ostatní postavy <span id="other-count"></span></summary>
-            <p class="muted small">Výzkum mají jen postavy v režimu Journey.</p>
+            <summary><span data-i18n="side.others"></span> <span id="other-count"></span></summary>
+            <p class="muted small" data-i18n="side.othersHint"></p>
             <ul id="other-list"></ul>
         </details>
 
         <footer class="side-footer">
-            <button id="btn-config" class="link-btn" type="button">Upravit vynechané předměty</button>
-            <button id="btn-dir" class="link-btn" type="button">Změnit složku Terrarie</button>
+            <button id="btn-config" class="link-btn" type="button" data-i18n="side.config"></button>
+            <button id="btn-dir" class="link-btn" type="button" data-i18n="side.dir"></button>
             <p id="terraria-dir" class="muted small path"></p>
+            <div class="lang-row">
+                <span class="muted small" id="lang-label" data-i18n="side.language"></span>
+                <div id="languages" class="segmented segmented-sm" role="radiogroup" aria-labelledby="lang-label"></div>
+            </div>
         </footer>
     </aside>
 
     <main class="main">
         <section id="screen-status" class="screen-status">
             <div class="spinner" aria-hidden="true"></div>
-            <h2 id="status-title">Spouštím Terraria Server…</h2>
+            <h2 id="status-title"></h2>
             <p id="status-message" class="muted"></p>
             <div id="status-actions" class="status-actions" hidden>
-                <button id="btn-retry" class="btn" type="button">Zkusit znovu</button>
-                <button id="btn-pick" class="btn btn-primary" type="button">Vybrat složku Terrarie</button>
+                <button id="btn-retry" class="btn" type="button" data-i18n="status.retry"></button>
+                <button id="btn-pick" class="btn btn-primary" type="button" data-i18n="status.pick"></button>
             </div>
         </section>
 
@@ -60,17 +64,17 @@
             <div id="categories" class="categories"></div>
 
             <div class="toolbar">
-                <input id="search" class="search" type="search" placeholder="Hledat předmět nebo ID…" autocomplete="off" spellcheck="false"/>
+                <input id="search" class="search" type="search" data-i18n-placeholder="search" autocomplete="off" spellcheck="false"/>
                 <div id="filters" class="segmented" role="radiogroup">
-                    <button type="button" role="radio" data-filter="missing">Chybí</button>
-                    <button type="button" role="radio" data-filter="partial">Rozpracované</button>
-                    <button type="button" role="radio" data-filter="done">Hotovo</button>
-                    <button type="button" role="radio" data-filter="all">Vše</button>
+                    <button type="button" role="radio" data-filter="missing" data-i18n="filter.missing"></button>
+                    <button type="button" role="radio" data-filter="partial" data-i18n="filter.partial"></button>
+                    <button type="button" role="radio" data-filter="done" data-i18n="filter.done"></button>
+                    <button type="button" role="radio" data-filter="all" data-i18n="filter.all"></button>
                 </div>
                 <select id="sort" class="select">
-                    <option value="id">Řadit podle ID</option>
-                    <option value="name">Podle názvu</option>
-                    <option value="left">Podle zbývajícího počtu</option>
+                    <option value="id" data-i18n="sort.id"></option>
+                    <option value="name" data-i18n="sort.name"></option>
+                    <option value="left" data-i18n="sort.left"></option>
                 </select>
             </div>
 
@@ -79,9 +83,9 @@
                     <thead>
                     <tr>
                         <th class="col-id">ID</th>
-                        <th>Předmět</th>
-                        <th class="col-cat">Kategorie</th>
-                        <th class="col-progress">Vyzkoumáno</th>
+                        <th data-i18n="col.item"></th>
+                        <th class="col-cat" data-i18n="col.category"></th>
+                        <th class="col-progress" data-i18n="col.progress"></th>
                     </tr>
                     </thead>
                     <tbody id="item-rows"></tbody>

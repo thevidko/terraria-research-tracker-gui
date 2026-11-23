@@ -41,12 +41,21 @@ type Research struct {
 }
 
 // Status describes whether the helper (and with it Terraria Server) is up.
+// The frontend translates State and Reason; Message holds untranslated details.
 type Status struct {
-	State       string `json:"state"` // "starting", "ready", "missing" or "error"
+	State       string `json:"state"`  // "starting", "ready", "missing" or "error"
+	Reason      string `json:"reason"` // for "error": "install" or "start"
 	Message     string `json:"message"`
 	TerrariaDir string `json:"terrariaDir"`
 	Version     string `json:"version"`
 }
+
+// Errors the frontend recognizes by their text and shows translated.
+var (
+	errNotRunning       = errors.New("not_running")
+	errNotTerrariaDir   = errors.New("not_terraria_dir")
+	errTerrariaNotFound = errors.New("terraria_not_found")
+)
 
 type settings struct {
 	TerrariaDir string `json:"terrariaDir"`
@@ -65,7 +74,7 @@ type App struct {
 }
 
 func NewApp() *App {
-	return &App{status: Status{State: "starting", Message: "Spouštím Terraria Server…"}}
+	return &App{status: Status{State: "starting"}}
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -96,10 +105,10 @@ func (a *App) start(dir string) {
 		dir = findTerrariaDir()
 	}
 	if dir == "" {
-		a.setStatus(Status{State: "missing", Message: "Terraria ze Steamu nebyla nalezena."})
+		a.setStatus(Status{State: "missing"})
 		return
 	}
-	a.setStatus(Status{State: "starting", TerrariaDir: dir, Message: "Spouštím Terraria Server…"})
+	a.setStatus(Status{State: "starting", TerrariaDir: dir})
 
 	a.mu.Lock()
 	if a.helper != nil {
@@ -109,12 +118,12 @@ func (a *App) start(dir string) {
 	a.mu.Unlock()
 
 	if err := installHelper(dir); err != nil {
-		a.setStatus(Status{State: "error", TerrariaDir: dir, Message: "Nepodařilo se nainstalovat pomocníka: " + err.Error()})
+		a.setStatus(Status{State: "error", Reason: "install", TerrariaDir: dir, Message: err.Error()})
 		return
 	}
 	h, err := startHelper(dir)
 	if err != nil {
-		a.setStatus(Status{State: "error", TerrariaDir: dir, Message: "Terraria Server se nespustil: " + err.Error()})
+		a.setStatus(Status{State: "error", Reason: "start", TerrariaDir: dir, Message: err.Error()})
 		return
 	}
 	a.mu.Lock()
@@ -128,7 +137,7 @@ func (a *App) request(command string, out any) error {
 	h := a.helper
 	a.mu.Unlock()
 	if h == nil {
-		return errors.New("Terraria Server ještě neběží")
+		return errNotRunning
 	}
 	return h.Request(command, out)
 }
@@ -187,15 +196,14 @@ func modTime(path string) time.Time {
 }
 
 // ChooseTerrariaDir lets the user pick the game folder by hand and restarts the helper.
-func (a *App) ChooseTerrariaDir() (string, error) {
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Vyber složku s Terrarií (obsahuje TerrariaServer.exe)",
-	})
+// The dialog title comes from the frontend so that it's in the chosen language.
+func (a *App) ChooseTerrariaDir(title string) (string, error) {
+	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{Title: title})
 	if err != nil || dir == "" {
 		return "", err
 	}
 	if !isTerrariaDir(dir) {
-		return "", errors.New("V téhle složce není Terraria (chybí " + strings.Join(terrariaFiles, " nebo ") + ").")
+		return "", errNotTerrariaDir
 	}
 	saveSettings(settings{TerrariaDir: dir})
 	go a.start(dir)
@@ -211,7 +219,7 @@ func (a *App) Restart() {
 func (a *App) OpenConfig() error {
 	dir := a.GetStatus().TerrariaDir
 	if dir == "" {
-		return errors.New("Terraria nebyla nalezena")
+		return errTerrariaNotFound
 	}
 	return openFile(filepath.Join(dir, helperName+".cfg"))
 }

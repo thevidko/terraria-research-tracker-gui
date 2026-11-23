@@ -9,27 +9,12 @@ import {
     Restart,
 } from '../wailsjs/go/main/App';
 import {EventsOn} from '../wailsjs/runtime/runtime';
+import {errorText, getLanguage, LANGUAGES, setLanguage, t, translatePage} from './i18n';
 
 const CATEGORIES = [
-    ['Melee', 'Na blízko'],
-    ['Ranged', 'Na dálku'],
-    ['Magic', 'Magie'],
-    ['Summon', 'Vyvolávání'],
-    ['Sentry', 'Věže'],
-    ['Tools', 'Nástroje'],
-    ['Accessory', 'Doplňky'],
-    ['Armor', 'Zbroj'],
-    ['Vanity', 'Kosmetika'],
-    ['Fishing', 'Rybaření'],
-    ['Placeable', 'Stavební'],
-    ['Consumable', 'Spotřební'],
-    ['Ammo', 'Munice'],
-    ['Material', 'Materiály'],
-    ['Dye', 'Barviva'],
-    ['Paint', 'Barvy'],
-    ['Other', 'Ostatní'],
+    'Melee', 'Ranged', 'Magic', 'Summon', 'Sentry', 'Tools', 'Accessory', 'Armor', 'Vanity',
+    'Fishing', 'Placeable', 'Consumable', 'Ammo', 'Material', 'Dye', 'Paint', 'Other',
 ];
-const CATEGORY_LABEL = Object.fromEntries(CATEGORIES);
 
 const state = {
     status: null,
@@ -66,9 +51,8 @@ function esc(text) {
 }
 
 function percent(done, total) {
-    if (!total) return '0 %';
-    const p = (done / total) * 100;
-    return `${p.toLocaleString('cs-CZ', {maximumFractionDigits: p < 10 ? 2 : 1})} %`;
+    const ratio = total ? done / total : 0;
+    return ratio.toLocaleString(t('locale'), {style: 'percent', maximumFractionDigits: ratio < 0.1 ? 2 : 1});
 }
 
 let toastTimer;
@@ -94,16 +78,10 @@ function applyStatus(status) {
     $('screen-status').hidden = ready && !!state.research;
     $('screen-research').hidden = !ready || !state.research;
     $('screen-status').classList.toggle('is-error', !ready && !starting);
-    $('status-title').textContent = starting
-        ? 'Spouštím Terraria Server…'
-        : ready
-            ? 'Vyber postavu vlevo'
-            : status.state === 'missing'
-                ? 'Terraria nenalezena'
-                : 'Něco se pokazilo';
-    $('status-message').textContent = starting
-        ? 'Terraria musí na chvíli naběhnout, aby načetla informace o předmětech.'
-        : ready ? 'Ukážu, co už máš vyzkoumané a co ještě chybí.' : status.message;
+    $('status-title').textContent = t(`status.${status.state}`);
+    $('status-message').textContent = status.state === 'error'
+        ? t(`status.error.${status.reason}`, status.message)
+        : t(`status.${status.state}Hint`);
     $('status-actions').hidden = ready || starting;
 
     if (ready && !wasReady) refreshPlayers();
@@ -115,7 +93,7 @@ async function refreshPlayers() {
     try {
         state.players = (await ListPlayers()) || [];
     } catch (err) {
-        toast(`Nepodařilo se načíst postavy: ${err}`);
+        toast(t('error.players', errorText(err)));
         return;
     }
     const journey = state.players.filter((p) => p.journey);
@@ -137,12 +115,12 @@ function renderPlayers() {
                 <span class="player-name">${esc(p.name)}</span>
                 <span class="player-meta">${esc(p.file)}${p.cloud ? ' <span class="tag">Cloud</span>' : ''}</span>
             </button>`).join('')
-        : '<p class="muted small">Žádná postava v režimu Journey.</p>';
+        : `<p class="muted small">${t('side.noJourney')}</p>`;
 
     $('other-players').hidden = !others.length;
     $('other-count').textContent = `(${others.length})`;
     $('other-list').innerHTML = others
-        .map((p) => `<li>${esc(p.name)} <span class="muted">${p.ok ? '' : '– nejde načíst'}</span></li>`)
+        .map((p) => `<li>${esc(p.name)} <span class="muted">${p.ok ? '' : t('side.unreadable')}</span></li>`)
         .join('');
 }
 
@@ -156,7 +134,7 @@ async function openPlayer(path, quiet = false) {
         state.research = research;
         state.loadedAt = new Date();
     } catch (err) {
-        if (!quiet) toast(`Postavu se nepodařilo načíst: ${err}`);
+        if (!quiet) toast(t('error.player', errorText(err)));
         return;
     }
     applyStatus(state.status);
@@ -177,12 +155,12 @@ function renderResearch() {
 
     $('player-name').textContent = research.name;
     $('player-meta').textContent = [
-        player?.cloud ? 'Steam Cloud' : 'Lokální uložení',
-        `načteno ${state.loadedAt.toLocaleTimeString('cs-CZ', {hour: '2-digit', minute: '2-digit'})}`,
-        'obnoví se samo po uložení ve hře',
+        t(player?.cloud ? 'summary.cloud' : 'summary.local'),
+        t('summary.loaded', state.loadedAt.toLocaleTimeString(t('locale'), {hour: 'numeric', minute: '2-digit'})),
+        t('summary.auto'),
     ].join(' · ');
     $('total-percent').textContent = percent(done, items.length);
-    $('total-count').textContent = `${done} z ${items.length} předmětů`;
+    $('total-count').textContent = t('summary.count', done.toLocaleString(t('locale')), items.length.toLocaleString(t('locale')));
     $('total-bar').style.width = `${(done / items.length) * 100}%`;
 
     const byCat = {};
@@ -191,11 +169,11 @@ function renderResearch() {
         c.total++;
         if (isDone(it)) c.done++;
     }
-    const cards = [['all', 'Vše', {done, total: items.length}]]
-        .concat(CATEGORIES.filter(([key]) => byCat[key]).map(([key, label]) => [key, label, byCat[key]]));
-    $('categories').innerHTML = cards.map(([key, label, c]) => `
+    const cards = [['all', {done, total: items.length}]]
+        .concat(CATEGORIES.filter((key) => byCat[key]).map((key) => [key, byCat[key]]));
+    $('categories').innerHTML = cards.map(([key, c]) => `
         <button type="button" class="cat${state.category === key ? ' active' : ''}${c.done === c.total ? ' complete' : ''}" data-cat="${key}">
-            <span class="cat-name">${label}</span>
+            <span class="cat-name">${t(`cat.${key}`)}</span>
             <span class="cat-count">${c.done}<span class="muted">/${c.total}</span></span>
             <span class="bar"><span class="bar-fill" style="width:${(c.done / c.total) * 100}%"></span></span>
         </button>`).join('');
@@ -234,8 +212,8 @@ function renderItems() {
         const cls = isDone(it) ? 'done' : it.have > 0 ? 'partial' : '';
         return `<tr class="${cls}">
             <td class="col-id">${it.id}</td>
-            <td><button type="button" class="item-link" data-wiki="${esc(it.name)}" title="Otevřít na wiki">${esc(it.name)}</button></td>
-            <td class="col-cat">${CATEGORY_LABEL[it.category] ?? it.category}</td>
+            <td><button type="button" class="item-link" data-wiki="${esc(it.name)}" title="${esc(t('item.wiki'))}">${esc(it.name)}</button></td>
+            <td class="col-cat">${t(`cat.${it.category}`)}</td>
             <td class="col-progress"><div class="progress">
                 <span class="progress-num">${have}<span class="muted">/${it.need}</span></span>
                 <span class="bar"><span class="bar-fill" style="width:${(have / it.need) * 100}%"></span></span>
@@ -247,8 +225,8 @@ function renderItems() {
     empty.hidden = rows.length > 0;
     if (!rows.length) {
         empty.textContent = q
-            ? `Nic neodpovídá „${state.search.trim()}“.`
-            : state.filter === 'missing' ? 'Tady máš vyzkoumáno všechno. 🎉' : 'Žádné předměty.';
+            ? t('empty.search', state.search.trim())
+            : t(state.filter === 'missing' ? 'empty.allDone' : 'empty.none');
     }
 }
 
@@ -292,9 +270,9 @@ $('item-rows').addEventListener('click', (e) => {
 
 async function pickDir() {
     try {
-        await ChooseTerrariaDir();
+        await ChooseTerrariaDir(t('dialog.pickDir'));
     } catch (err) {
-        toast(String(err));
+        toast(errorText(err));
     }
 }
 
@@ -305,7 +283,7 @@ $('btn-config').addEventListener('click', async () => {
     try {
         await OpenConfig();
     } catch (err) {
-        toast(String(err));
+        toast(errorText(err));
     }
 });
 
@@ -315,6 +293,28 @@ document.addEventListener('keydown', (e) => {
         $('search').focus();
     }
 });
+
+// --- language ---------------------------------------------------------------
+
+function renderLanguage() {
+    translatePage();
+    $('languages').innerHTML = LANGUAGES.map(([code, name]) => `
+        <button type="button" role="radio" data-lang="${code}" title="${name}"
+            class="${code === getLanguage() ? 'active' : ''}" aria-checked="${code === getLanguage()}">${code.toUpperCase()}</button>`).join('');
+    if (state.status) applyStatus(state.status);
+    renderPlayers();
+    renderResearch();
+}
+
+$('languages').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    save('language', setLanguage(btn.dataset.lang));
+    renderLanguage();
+});
+
+setLanguage(load('language', 'en'));
+renderLanguage();
 
 EventsOn('status', applyStatus);
 EventsOn('player-changed', (path) => {

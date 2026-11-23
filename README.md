@@ -1,65 +1,71 @@
 # Terraria Research Tracker (GUI)
 
-Desktopová aplikace, která ukazuje, kolik předmětů má tvoje postava v režimu Journey vyzkoumáno a co ještě chybí. Funguje s Terrarií ze Steamu na Linuxu (nativní verze) i na Windows.
+**English** · [Čeština](README.cs.md)
 
-Hotové sestavení stáhneš na stránce [Releases](../../releases): pro Linux `…-linux-amd64.tar.gz`, pro Windows `…-windows-amd64.zip`. Stačí rozbalit a spustit, Terrarii aplikace najde sama.
+A desktop app that shows how much of Journey Mode research your character has done and what's still missing. Works with Terraria from Steam on Linux (native version) and Windows.
 
-Vychází z [Terraria Research Tracker (CLI)](https://github.com/YAL-Game-Tools/Terraria-Research-Tracker-CLI) od YellowAfterlife (licence MIT).
+Download a ready-made build from [Releases](../../releases): `…-linux-amd64.tar.gz` for Linux, `…-windows-amd64.zip` for Windows. Unpack it and run it; the app finds Terraria on its own. The interface is in English, with Czech available from the switch in the bottom left.
 
-## Jak to funguje
+Based on [Terraria Research Tracker (CLI)](https://github.com/YAL-Game-Tools/Terraria-Research-Tracker-CLI) by YellowAfterlife (MIT license).
 
-Data o předmětech (názvy, kategorie, kolik kusů je potřeba na výzkum) nejsou nikde uložená jako soubor. Vzniknou až tehdy, když běží kód samotné Terrarie. Proto má projekt dvě části:
+## How it works
 
-- **`helper/` – pomocník v C#.** Načte `TerrariaServer.exe` ze složky hry a pustí ho s rozbitým světem, takže server jen načte data o předmětech a skončí. Všechno, co server vypisuje, zahodí. Potom čte příkazy ze stdin a odpovídá jedním řádkem JSON:
-  - `list` – všechny postavy (lokální i ze Steam Cloudu),
-  - `load <cesta k .plr>` – výzkum postavy po předmětech,
+Item data (names, categories, how many of each item research needs) isn't stored in any file. It only exists once Terraria's own code runs. That's why the project has two parts:
+
+- **`helper/`: a C# helper.** It loads `TerrariaServer.exe` from the game folder and starts it with a deliberately broken world, so the server loads item data and then stops. Everything the server prints is discarded. After that the helper reads commands from stdin and answers each with one line of JSON:
+  - `list`: all characters (local and Steam Cloud),
+  - `load <path to .plr>`: the character's research, item by item,
   - `quit`.
-- **`app/` – aplikace v Go a Wails.** Najde Terrarii ve Steamu, nakopíruje do její složky pomocníka, spustí ho a zobrazí výsledky. Soubor postavy sleduje a po uložení ve hře výsledky sama obnoví.
+- **`app/`: the Go + Wails app.** It finds Terraria in your Steam libraries, copies the helper into the game folder, runs it and shows the results. It watches the character file and refreshes on its own when the game saves.
 
-Na Linuxu se pomocník spouští přes Mono, které je přibalené k Terrarii. Aplikace vytvoří ve složce hry kopii `TerrariaServer.bin.x86_64` pod jménem `TerrariaResearchHelper.bin.x86_64`. Spouštěč MonoKickstart vždycky načte `.exe` se stejným jménem jako on sám, takže pustí pomocníka. Na Windows je pomocník obyčejný program pro .NET Framework a spouští se přímo (jako 32bitový, protože taková je i Terraria).
+On Linux the helper runs on the Mono runtime that ships with Terraria. The app creates a copy of `TerrariaServer.bin.x86_64` in the game folder named `TerrariaResearchHelper.bin.x86_64`. The MonoKickstart launcher always loads the `.exe` with its own name, so it runs the helper. On Windows the helper is an ordinary .NET Framework program and runs directly (as 32-bit, to match Terraria).
 
-### Soubory ve složce Terrarie
+### Files in the Terraria folder
 
-Aplikace je tam zapíše sama při každém spuštění (a přepíše jen ty, které se změnily):
+The app writes these on every start (only rewriting the ones that changed):
 
-| Soubor | Co to je |
+| File | What it is |
 |---|---|
-| `TerrariaResearchHelper.exe` | pomocník |
-| `TerrariaResearchHelper.bin.x86_64` | kopie spouštěče serveru (jen Linux) |
-| `TerrariaResearchHelper.wld` | záměrně rozbitý svět |
-| `TerrariaResearchHelper.cfg` | vynechané předměty a aliasy; zapíše se jen poprvé, pak ho můžeš upravovat (tlačítko „Upravit vynechané předměty“) |
+| `TerrariaResearchHelper.exe` | the helper |
+| `TerrariaResearchHelper.bin.x86_64` | copy of the server launcher (Linux only) |
+| `TerrariaResearchHelper.wld` | the deliberately broken world |
+| `TerrariaResearchHelper.cfg` | omitted items and aliases; written only the first time, after that it's yours to edit ("Edit omitted items" button) |
 
-## Sestavení
+## Building
 
-Na Linuxu potřebuješ `dotnet-sdk`, `go`, `wails`, `npm` a `webkit2gtk-4.1`. Samotnou Terrarii k sestavení nepotřebuješ: pomocník na kód hry sahá jen přes reflexi až za běhu, takže se dá přeložit kdekoli.
+On Linux you need `dotnet-sdk`, `go`, `wails`, `npm` and `webkit2gtk-4.1`. You don't need Terraria to build: the helper reaches the game's code only through reflection at run time, so it compiles anywhere.
 
 ```sh
-make            # pomocník + aplikace → app/build/bin/terraria-research-tracker
-make dev        # vývojový režim s živým načítáním frontendu
+make            # helper + app → app/build/bin/terraria-research-tracker
+make dev        # development mode with live frontend reload
 ```
 
-Verzi pro Windows sestavuje GitHub Actions (viz níže). Lokálně na Windows stačí zopakovat kroky z workflow: `dotnet build` pomocníka, zkopírovat výstup do `app/helperbin/` a v `app/` spustit `wails build`.
+The Windows version is built by GitHub Actions (see below). To build it locally on Windows, repeat the workflow steps: `dotnet build` the helper, copy its output to `app/helperbin/`, and run `wails build` in `app/`.
 
 ## Releases
 
-GitHub Actions (`.github/workflows/build.yml`) sestaví aplikaci pro Linux i Windows při každém pushi do `main` a u každého pull requestu. Výsledky najdeš jako artefakty u běhu workflow.
+GitHub Actions (`.github/workflows/build.yml`) builds the app for Linux and Windows on every push to `main` and on every pull request. The builds are attached to each workflow run as artifacts.
 
-Nový release vytvoříš tagem:
+To publish a release, push a tag:
 
 ```sh
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Workflow pak vytvoří GitHub release s archivy `terraria-research-tracker-1.0.0-linux-amd64.tar.gz` a `terraria-research-tracker-1.0.0-windows-amd64.zip`.
+The workflow then creates a GitHub release with `terraria-research-tracker-1.0.0-linux-amd64.tar.gz` and `terraria-research-tracker-1.0.0-windows-amd64.zip`.
 
-## Struktura
+## Translations
+
+UI strings live in `app/frontend/src/i18n.js`. To add a language, copy the `en` block under a new code, translate it, and add the code to `LANGUAGES`.
+
+## Layout
 
 ```
-helper/      pomocník v C# (net48; na Linuxu běží v Mono z Terrarie)
-app/         aplikace v Go + Wails, frontend v app/frontend (čisté JS, Vite);
-             platform_unix.go / platform_windows.go řeší rozdíly mezi systémy
+helper/      C# helper (net48; on Linux it runs on Terraria's Mono)
+app/         Go + Wails app, frontend in app/frontend (plain JS, Vite);
+             platform_unix.go / platform_windows.go handle OS differences
 original/
-  windows-release/   původní stažená verze pro Windows (exe, cfg, wld)
-  upstream-source/   původní zdroják z GitHubu, beze změn
+  windows-release/   the original Windows download (exe, cfg, wld)
+  upstream-source/   the original source from GitHub, unchanged
 ```
