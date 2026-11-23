@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -97,7 +96,7 @@ func (a *App) start(dir string) {
 		dir = findTerrariaDir()
 	}
 	if dir == "" {
-		a.setStatus(Status{State: "missing", Message: "Terraria (linuxová verze ze Steamu) nebyla nalezena."})
+		a.setStatus(Status{State: "missing", Message: "Terraria ze Steamu nebyla nalezena."})
 		return
 	}
 	a.setStatus(Status{State: "starting", TerrariaDir: dir, Message: "Spouštím Terraria Server…"})
@@ -196,7 +195,7 @@ func (a *App) ChooseTerrariaDir() (string, error) {
 		return "", err
 	}
 	if !isTerrariaDir(dir) {
-		return "", errors.New("V téhle složce není linuxová Terraria (chybí TerrariaServer.exe nebo TerrariaServer.bin.x86_64).")
+		return "", errors.New("V téhle složce není Terraria (chybí " + strings.Join(terrariaFiles, " nebo ") + ").")
 	}
 	saveSettings(settings{TerrariaDir: dir})
 	go a.start(dir)
@@ -214,7 +213,7 @@ func (a *App) OpenConfig() error {
 	if dir == "" {
 		return errors.New("Terraria nebyla nalezena")
 	}
-	return exec.Command("xdg-open", filepath.Join(dir, helperName+".cfg")).Start()
+	return openFile(filepath.Join(dir, helperName+".cfg"))
 }
 
 // OpenWiki opens the item's page on the Terraria wiki.

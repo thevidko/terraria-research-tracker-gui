@@ -73,17 +73,30 @@ public static class Tracker {
 			}
 		}
 		// Steam Cloud saves live in Steam's userdata folder instead
-		var home = Environment.GetEnvironmentVariable("HOME");
-		if (string.IsNullOrEmpty(home)) yield break;
-		var userdata = Path.Combine(home, ".local/share/Steam/userdata");
-		if (!Directory.Exists(userdata)) yield break;
-		foreach (var user in Directory.GetDirectories(userdata)) {
-			var cloud = Path.Combine(user, "105600/remote/players");
-			if (!Directory.Exists(cloud)) continue;
-			foreach (var path in Directory.GetFiles(cloud, "*.plr")) {
-				yield return new KeyValuePair<string, bool>(path, true);
+		var seen = new HashSet<string>();
+		foreach (var root in SteamRoots()) {
+			var userdata = Path.Combine(root, "userdata");
+			if (!Directory.Exists(userdata)) continue;
+			foreach (var user in Directory.GetDirectories(userdata)) {
+				var cloud = Path.GetFullPath(Path.Combine(user, "105600", "remote", "players"));
+				if (!Directory.Exists(cloud) || !seen.Add(cloud)) continue;
+				foreach (var path in Directory.GetFiles(cloud, "*.plr")) {
+					yield return new KeyValuePair<string, bool>(path, true);
+				}
 			}
 		}
+	}
+
+	// the app passes the Steam folders it knows of; fall back to the usual Linux one
+	static IEnumerable<string> SteamRoots() {
+		var roots = Environment.GetEnvironmentVariable("TRH_STEAM_ROOTS");
+		if (!string.IsNullOrEmpty(roots)) {
+			foreach (var root in roots.Split(Path.PathSeparator)) {
+				if (root.Length > 0) yield return root;
+			}
+		}
+		var home = Environment.GetEnvironmentVariable("HOME");
+		if (!string.IsNullOrEmpty(home)) yield return Path.Combine(home, ".local/share/Steam");
 	}
 
 	static string ListPlayers() {

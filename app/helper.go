@@ -45,13 +45,7 @@ func installHelper(dir string) error {
 			return err
 		}
 	}
-	// MonoKickstart runs `<own name>.exe`, so a renamed copy of the server's
-	// launcher runs our helper with the Mono runtime bundled with the game.
-	launcher, err := os.ReadFile(filepath.Join(dir, "TerrariaServer.bin.x86_64"))
-	if err != nil {
-		return err
-	}
-	return writeIfChanged(filepath.Join(dir, helperName+".bin.x86_64"), launcher, 0o755)
+	return installLauncher(dir)
 }
 
 func writeIfChanged(path string, data []byte, mode ...os.FileMode) error {
@@ -84,9 +78,13 @@ type helperReply struct {
 }
 
 func startHelper(dir string) (*Helper, error) {
-	cmd := exec.Command(filepath.Join(dir, helperName+".bin.x86_64"))
+	cmd := helperCommand(dir)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "MONO_IOMAP=all")
+	if cmd.Env == nil {
+		cmd.Env = os.Environ()
+	}
+	// lets the helper find Steam Cloud saves in Steam's userdata folder
+	cmd.Env = append(cmd.Env, "TRH_STEAM_ROOTS="+strings.Join(existingSteamRoots(), string(os.PathListSeparator)))
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	stdin, err := cmd.StdinPipe()
@@ -189,4 +187,20 @@ func (h *Helper) Close() {
 	case <-time.After(3 * time.Second):
 		h.cmd.Process.Kill()
 	}
+}
+
+// existingSteamRoots resolves symlinks (~/.steam/steam usually points to
+// ~/.local/share/Steam) so that the same saves aren't listed twice.
+func existingSteamRoots() []string {
+	var roots []string
+	seen := map[string]bool{}
+	for _, root := range steamRoots() {
+		real, err := filepath.EvalSymlinks(root)
+		if err != nil || seen[real] {
+			continue
+		}
+		seen[real] = true
+		roots = append(roots, real)
+	}
+	return roots
 }

@@ -12,8 +12,23 @@ permissions:
   contents: write
 
 jobs:
-  linux:
-    runs-on: ubuntu-24.04
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-amd64
+            wails_args: -tags webkit2_41
+            binary: terraria-research-tracker
+          - os: windows-2022
+            platform: windows-amd64
+            wails_args: -platform windows/amd64
+            binary: terraria-research-tracker.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -33,33 +48,56 @@ jobs:
           cache-dependency-path: app/frontend/package-lock.json
 
       - name: Install system libraries
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.1
 
-      - name: Build
-        run: make app WAILS="$(go env GOPATH)/bin/wails"
+      - name: Build helper
+        run: |
+          dotnet build helper/TerrariaResearchHelper.csproj -c Release -o build/helper
+          mkdir -p app/helperbin
+          cp build/helper/TerrariaResearchHelper.{exe,wld,cfg} app/helperbin/
+
+      - name: Build app
+        working-directory: app
+        run: '"$(go env GOPATH)/bin/wails" build ${{ matrix.wails_args }}'
 
       - name: Package
         id: package
         run: |
           version="${GITHUB_REF_NAME#v}"
           [[ "$GITHUB_REF_TYPE" == tag ]] || version="dev-${GITHUB_SHA::7}"
-          name="terraria-research-tracker-${version}-linux-amd64"
+          name="terraria-research-tracker-${version}-${{ matrix.platform }}"
           mkdir -p "dist/$name"
-          cp app/build/bin/terraria-research-tracker README.md LICENSE "dist/$name/"
-          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          cp "app/build/bin/${{ matrix.binary }}" README.md LICENSE "dist/$name/"
+          cd dist
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            7z a -tzip "$name.zip" "$name" > /dev/null
+            echo "file=dist/$name.zip" >> "$GITHUB_OUTPUT"
+          else
+            tar -czf "$name.tar.gz" "$name"
+            echo "file=dist/$name.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.package.outputs.name }}
-          path: dist/${{ steps.package.outputs.name }}.tar.gz
+          path: ${{ steps.package.outputs.file }}
 
-      - name: Publish release
-        if: github.ref_type == 'tag'
-        uses: softprops/action-gh-release@v2
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          files: dist/${{ steps.package.outputs.name }}.tar.gz
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
           generate_release_notes: true

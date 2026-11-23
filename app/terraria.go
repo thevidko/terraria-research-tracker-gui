@@ -5,24 +5,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 // steamLibraryPath matches `"path"		"/some/dir"` lines in libraryfolders.vdf.
 var steamLibraryPath = regexp.MustCompile(`^\s*"path"\s*"(.+)"\s*$`)
 
-// steamRoots are the usual places a Linux Steam install lives.
-func steamRoots() []string {
-	home, _ := os.UserHomeDir()
-	return []string{
-		filepath.Join(home, ".local/share/Steam"),
-		filepath.Join(home, ".steam/steam"),
-		filepath.Join(home, ".var/app/com.valvesoftware.Steam/data/Steam"),
-	}
-}
-
-// isTerrariaDir reports whether dir holds a native Linux Terraria install.
+// isTerrariaDir reports whether dir holds a Terraria install the helper can run with.
 func isTerrariaDir(dir string) bool {
-	for _, name := range []string{"TerrariaServer.exe", "TerrariaServer.bin.x86_64"} {
+	for _, name := range terrariaFiles {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			return false
 		}
@@ -38,20 +29,21 @@ func findTerrariaDir() string {
 	var libraries []string
 	for _, root := range steamRoots() {
 		libraries = append(libraries, root)
-		f, err := os.Open(filepath.Join(root, "steamapps/libraryfolders.vdf"))
+		f, err := os.Open(filepath.Join(root, "steamapps", "libraryfolders.vdf"))
 		if err != nil {
 			continue
 		}
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			if m := steamLibraryPath.FindStringSubmatch(scanner.Text()); m != nil {
-				libraries = append(libraries, m[1])
+				// Windows paths come with escaped backslashes
+				libraries = append(libraries, strings.ReplaceAll(m[1], `\\`, `\`))
 			}
 		}
 		f.Close()
 	}
 	for _, lib := range libraries {
-		dir := filepath.Join(lib, "steamapps/common/Terraria")
+		dir := filepath.Join(lib, "steamapps", "common", "Terraria")
 		if isTerrariaDir(dir) {
 			return dir
 		}

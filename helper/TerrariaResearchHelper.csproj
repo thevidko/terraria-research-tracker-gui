@@ -4,6 +4,8 @@
     <OutputType>exe</OutputType>
     <TargetFramework>net48</TargetFramework>
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <!-- Windows Terraria is 32-bit; Mono ignores this -->
+    <Prefer32Bit>true</Prefer32Bit>
     <ImplicitUsings>disable</ImplicitUsings>
     <LangVersion>12</LangVersion>
     <Nullable>disable</Nullable>

@@ -1,6 +1,8 @@
-# Terraria Research Tracker (Linux GUI)
+# Terraria Research Tracker (GUI)
 
-Desktopová aplikace, která ukazuje, kolik předmětů má tvoje postava v režimu Journey vyzkoumáno a co ještě chybí. Funguje s nativní linuxovou Terrarií ze Steamu.
+Desktopová aplikace, která ukazuje, kolik předmětů má tvoje postava v režimu Journey vyzkoumáno a co ještě chybí. Funguje s Terrarií ze Steamu na Linuxu (nativní verze) i na Windows.
+
+Hotové sestavení stáhneš na stránce [Releases](../../releases): pro Linux `…-linux-amd64.tar.gz`, pro Windows `…-windows-amd64.zip`. Stačí rozbalit a spustit, Terrarii aplikace najde sama.
 
 Vychází z [Terraria Research Tracker (CLI)](https://github.com/YAL-Game-Tools/Terraria-Research-Tracker-CLI) od YellowAfterlife (licence MIT).
 
@@ -14,7 +16,7 @@ Data o předmětech (názvy, kategorie, kolik kusů je potřeba na výzkum) nejs
   - `quit`.
 - **`app/` – aplikace v Go a Wails.** Najde Terrarii ve Steamu, nakopíruje do její složky pomocníka, spustí ho a zobrazí výsledky. Soubor postavy sleduje a po uložení ve hře výsledky sama obnoví.
 
-Pomocník se spouští přes Mono, které je přibalené k Terrarii. Aplikace vytvoří ve složce hry kopii `TerrariaServer.bin.x86_64` pod jménem `TerrariaResearchHelper.bin.x86_64`. Spouštěč MonoKickstart vždycky načte `.exe` se stejným jménem jako on sám, takže pustí pomocníka.
+Na Linuxu se pomocník spouští přes Mono, které je přibalené k Terrarii. Aplikace vytvoří ve složce hry kopii `TerrariaServer.bin.x86_64` pod jménem `TerrariaResearchHelper.bin.x86_64`. Spouštěč MonoKickstart vždycky načte `.exe` se stejným jménem jako on sám, takže pustí pomocníka. Na Windows je pomocník obyčejný program pro .NET Framework a spouští se přímo (jako 32bitový, protože taková je i Terraria).
 
 ### Soubory ve složce Terrarie
 
@@ -23,22 +25,24 @@ Aplikace je tam zapíše sama při každém spuštění (a přepíše jen ty, kt
 | Soubor | Co to je |
 |---|---|
 | `TerrariaResearchHelper.exe` | pomocník |
-| `TerrariaResearchHelper.bin.x86_64` | kopie spouštěče serveru |
+| `TerrariaResearchHelper.bin.x86_64` | kopie spouštěče serveru (jen Linux) |
 | `TerrariaResearchHelper.wld` | záměrně rozbitý svět |
 | `TerrariaResearchHelper.cfg` | vynechané předměty a aliasy; zapíše se jen poprvé, pak ho můžeš upravovat (tlačítko „Upravit vynechané předměty“) |
 
 ## Sestavení
 
-Potřebuješ `dotnet-sdk`, `go`, `wails`, `npm` a `webkit2gtk-4.1`. Samotnou Terrarii k sestavení nepotřebuješ: pomocník na kód hry sahá jen přes reflexi až za běhu, takže se dá přeložit kdekoli.
+Na Linuxu potřebuješ `dotnet-sdk`, `go`, `wails`, `npm` a `webkit2gtk-4.1`. Samotnou Terrarii k sestavení nepotřebuješ: pomocník na kód hry sahá jen přes reflexi až za běhu, takže se dá přeložit kdekoli.
 
 ```sh
 make            # pomocník + aplikace → app/build/bin/terraria-research-tracker
 make dev        # vývojový režim s živým načítáním frontendu
 ```
 
+Verzi pro Windows sestavuje GitHub Actions (viz níže). Lokálně na Windows stačí zopakovat kroky z workflow: `dotnet build` pomocníka, zkopírovat výstup do `app/helperbin/` a v `app/` spustit `wails build`.
+
 ## Releases
 
-GitHub Actions (`.github/workflows/build.yml`) sestaví aplikaci při každém pushi do `main` a u každého pull requestu. Výsledek najdeš jako artefakt u běhu workflow.
+GitHub Actions (`.github/workflows/build.yml`) sestaví aplikaci pro Linux i Windows při každém pushi do `main` a u každého pull requestu. Výsledky najdeš jako artefakty u běhu workflow.
 
 Nový release vytvoříš tagem:
 
@@ -47,13 +51,14 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Workflow pak vytvoří GitHub release s archivem `terraria-research-tracker-1.0.0-linux-amd64.tar.gz`.
+Workflow pak vytvoří GitHub release s archivy `terraria-research-tracker-1.0.0-linux-amd64.tar.gz` a `terraria-research-tracker-1.0.0-windows-amd64.zip`.
 
 ## Struktura
 
 ```
-helper/      pomocník v C# (net48, spouští se v Mono z Terrarie)
-app/         aplikace v Go + Wails, frontend v app/frontend (čisté JS, Vite)
+helper/      pomocník v C# (net48; na Linuxu běží v Mono z Terrarie)
+app/         aplikace v Go + Wails, frontend v app/frontend (čisté JS, Vite);
+             platform_unix.go / platform_windows.go řeší rozdíly mezi systémy
 original/
   windows-release/   původní stažená verze pro Windows (exe, cfg, wld)
   upstream-source/   původní zdroják z GitHubu, beze změn
