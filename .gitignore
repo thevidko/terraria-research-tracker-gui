@@ -1,0 +1,9 @@
+/build/
+/helper/bin/
+/helper/obj/
+/app/helperbin/
+/app/build/bin/
+/app/frontend/dist/
+/app/frontend/node_modules/
+/app/frontend/.impeccable/
+/app/frontend/package.json.md5

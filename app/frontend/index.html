@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Terraria Research Tracker</title>
+</head>
+<body>
+<div id="app">
+    <aside class="sidebar">
+        <header class="brand">
+            <div class="brand-mark" aria-hidden="true"></div>
+            <div>
+                <h1>Research Tracker</h1>
+                <p id="game-version" class="muted">Terraria</p>
+            </div>
+        </header>
+
+        <h2 class="side-title">Postavy</h2>
+        <nav id="players" class="players"></nav>
+        <details id="other-players" class="other-players" hidden>
+            <summary>Ostatní postavy <span id="other-count"></span></summary>
+            <p class="muted small">Výzkum mají jen postavy v režimu Journey.</p>
+            <ul id="other-list"></ul>
+        </details>
+
+        <footer class="side-footer">
+            <button id="btn-config" class="link-btn" type="button">Upravit vynechané předměty</button>
+            <button id="btn-dir" class="link-btn" type="button">Změnit složku Terrarie</button>
+            <p id="terraria-dir" class="muted small path"></p>
+        </footer>
+    </aside>
+
+    <main class="main">
+        <section id="screen-status" class="screen-status">
+            <div class="spinner" aria-hidden="true"></div>
+            <h2 id="status-title">Spouštím Terraria Server…</h2>
+            <p id="status-message" class="muted"></p>
+            <div id="status-actions" class="status-actions" hidden>
+                <button id="btn-retry" class="btn" type="button">Zkusit znovu</button>
+                <button id="btn-pick" class="btn btn-primary" type="button">Vybrat složku Terrarie</button>
+            </div>
+        </section>
+
+        <section id="screen-research" class="screen-research" hidden>
+            <header class="summary">
+                <div class="summary-head">
+                    <div>
+                        <h2 id="player-name"></h2>
+                        <p id="player-meta" class="muted small"></p>
+                    </div>
+                    <div class="summary-total">
+                        <span id="total-percent" class="big"></span>
+                        <span id="total-count" class="muted"></span>
+                    </div>
+                </div>
+                <div class="bar bar-lg"><div id="total-bar" class="bar-fill"></div></div>
+            </header>
+
+            <div id="categories" class="categories"></div>
+
+            <div class="toolbar">
+                <input id="search" class="search" type="search" placeholder="Hledat předmět nebo ID…" autocomplete="off" spellcheck="false"/>
+                <div id="filters" class="segmented" role="radiogroup">
+                    <button type="button" role="radio" data-filter="missing">Chybí</button>
+                    <button type="button" role="radio" data-filter="partial">Rozpracované</button>
+                    <button type="button" role="radio" data-filter="done">Hotovo</button>
+                    <button type="button" role="radio" data-filter="all">Vše</button>
+                </div>
+                <select id="sort" class="select">
+                    <option value="id">Řadit podle ID</option>
+                    <option value="name">Podle názvu</option>
+                    <option value="left">Podle zbývajícího počtu</option>
+                </select>
+            </div>
+
+            <div class="table-wrap">
+                <table class="items">
+                    <thead>
+                    <tr>
+                        <th class="col-id">ID</th>
+                        <th>Předmět</th>
+                        <th class="col-cat">Kategorie</th>
+                        <th class="col-progress">Vyzkoumáno</th>
+                    </tr>
+                    </thead>
+                    <tbody id="item-rows"></tbody>
+                </table>
+                <p id="empty" class="empty muted" hidden></p>
+            </div>
+        </section>
+    </main>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="./src/main.js" type="module"></script>
+</body>
+</html>
